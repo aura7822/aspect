@@ -2,13 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/public/favicon1.svg" />
+    <!-- Fixed: No /public/ prefix -->
+    <link rel="icon" type="image/svg+xml" href="/favicon1.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta property="og:image" content="https://github.com/aura7822/aspect/blob/master/public/orient.png" />
+    
+    <!-- Option A: Using GitHub Raw URL -->
+    <meta property="og:image" content="https://raw.githubusercontent.com/aura7822/aspect/master/public/orient.png" />
+    
+    <!-- OR Option B: Using your deployed site URL (better for production) -->
+    <!-- <meta property="og:image" content="https://your-site.vercel.app/orient.png" /> -->
+    
+    <!-- Optional but recommended OG tags -->
+    <meta property="og:title" content="aspect™" />
+    <meta property="og:description" content="Your description here" />
+    <meta property="og:url" content="https://your-site.vercel.app" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/aura7822/aspect/master/public/orient.png" />
+    
     <title>aspect™</title>
   </head>
   <body>
-    
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
