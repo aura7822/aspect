@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark: charcoal black with a rich golden-brown accent */
+  color-scheme: dark;
+  --fg-primary: #F0E6D2;
+  --fg-secondary: #C9BBA0;
+  --fg-tertiary: #A2937A;
+  --fg-muted: #7C7059;
+  --surface-1: rgba(240,220,180,0.05);
+  --surface-2: rgba(240,220,180,0.09);
+  --surface-3: rgba(240,220,180,0.14);
+  --border-subtle: rgba(240,220,180,0.10);
+  --border-subtle-2: rgba(240,220,180,0.05);
+  --border-strong: rgba(240,220,180,0.20);
+  --page-bg: #17140F;
+  --accent: #C9972B;
+  --accent-bright: #E0B355;
+  --accent-gold: #C9972B;
+  --accent-rgb: 201 151 43;
+  --accent-bright-rgb: 224 179 85;
+  --accent-dim-rgb: 138 101 28;
+}
+
+html.light {
+  /* Light: warm, low-contrast sand with a softened brick-red accent — easier on the eyes */
+  color-scheme: light;
+  --fg-primary: #3A2E1F;
+  --fg-secondary: #6B573D;
+  --fg-tertiary: #8A7657;
+  --fg-muted: #9C8A6C;
+  --surface-1: rgba(58,46,31,0.05);
+  --surface-2: rgba(58,46,31,0.09);
+  --surface-3: rgba(58,46,31,0.13);
+  --border-subtle: rgba(58,46,31,0.12);
+  --border-subtle-2: rgba(58,46,31,0.07);
+  --border-strong: rgba(58,46,31,0.22);
+  --page-bg: #F2E6CF;
+  --accent: #B8442E;
+  --accent-bright: #D35A3E;
+  --accent-gold: #B8442E;
+  --accent-rgb: 184 68 46;
+  --accent-bright-rgb: 211 90 62;
+  --accent-dim-rgb: 138 51 31;
+}
+
+.text-fg-primary { color: var(--fg-primary); }
+.text-fg-secondary { color: var(--fg-secondary); }
+.text-fg-tertiary { color: var(--fg-tertiary); }
+.text-fg-muted { color: var(--fg-muted); }
+.hover\:text-fg-primary:hover { color: var(--fg-primary); }
+.hover\:text-fg-secondary:hover { color: var(--fg-secondary); }
+.bg-surface-1 { background-color: var(--surface-1); }
+.bg-surface-2 { background-color: var(--surface-2); }
+.bg-surface-3 { background-color: var(--surface-3); }
+.hover\:bg-surface-1:hover { background-color: var(--surface-1); }
+.border-subtle { border-color: var(--border-subtle); }
+.border-subtle-2 { border-color: var(--border-subtle-2); }
+.border-strong { border-color: var(--border-strong); }
+.hover\:border-strong:hover { border-color: var(--border-strong); }
+.hover\:border-subtle:hover { border-color: var(--border-subtle); }
+.divide-subtle > * + * { border-color: var(--border-subtle); }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+body {
+  background-color: var(--page-bg);
+  color: var(--fg-primary);
+  @apply font-body antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.glass {
+  @apply backdrop-blur-glass border border-subtle shadow-glass;
+}
+
+html:not(.dark) .glass {
+  @apply shadow-none;
+  background-color: rgba(255,251,242,0.72);
+}
+
+html.dark .glass {
+  background-color: rgba(26,22,17,0.66);
+}
+
+@keyframes typing-caret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-caret {
+  animation: typing-caret 0.9s step-start infinite;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: calc(16px * var(--font-scale, 1));
+}
+
+.dyslexia-font, .dyslexia-font * {
+  font-family: 'Comic Sans MS', 'Comic Sans', 'OpenDyslexic', Verdana, sans-serif !important;
+  letter-spacing: 0.02em;
+}
+
+/* Reveal-on-scroll: elements fade + rise into place */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Skeleton loading shimmer */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-1) 25%, var(--surface-2) 50%, var(--surface-1) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  border-radius: 0.75rem;
+}
+
+/* Infinite marquee belt for the tech stack strip */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee-scroll 28s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Curved / futuristic vertical scroll rail for the service card list */
+.curved-scroll-rail {
+  mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8%, black 92%, transparent 100%);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.curved-scroll-rail::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* GitHub-style contribution heatmap cells */
+.contrib-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 2px;
+}
+
+.input-field {
+  width: 100%;
+  border-radius: 0.625rem;
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--fg-primary);
+}
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.focus-ring {
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-page;
+}
+
+.container-page {
+  @apply max-w-7xl mx-auto px-6 md:px-10;
+}
