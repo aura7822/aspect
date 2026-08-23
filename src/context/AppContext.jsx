@@ -1,17 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { notifications as seedNotifications } from '../data/notifications.js'
-import { developers as seedDevelopers } from '../data/developers.js'
 import { t as translate } from '../data/i18n.js'
+import { api, ApiError } from '../lib/apiClient.js'
 
 const AppContext = createContext(null)
-
-const mockUsers = {
-  visitor: null,
-  client: { name: 'client1', org: 'Ledgerly', role: 'client', email: 'rhea@ledgerly.io', avatar: null },
-  enduser: { name: 'user1', org: null, role: 'enduser', email: 'alex@example.com', avatar: null },
-  developer: { name: 'Aura Joshua', id: 'dev-1', role: 'developer', email: 'sarah@aspect.dev', avatar: '../public/avatars/avatar1.svg' },
-  admin: { name: 'Aura', role: 'admin', email: 'admin@aspect.dev', avatar: null },
-}
 
 const pipelineStages = ['commit', 'build', 'test', 'deploy']
 
@@ -25,13 +17,19 @@ function greetingKey() {
   if (h < 18) return '<good_afternoon/>'
   return '<good_evening/>'
 }
-
 export function AppProvider({ children }) {
   const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'light'
+    if (typeof window === 'undefined') return 'dark'
     return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
   })
-  const [role, setRoleState] = useState('visitor') // visitor | client | enduser | developer | admin
+  // The only source of truth for "who is signed in" is the backend session.
+  // No local role-switcher, no mock user table — currentUser is either the
+  // real account the session cookie resolves to, or null.
+  const [currentUser, setCurrentUser] = useState(null)
+  const [authChecked, setAuthChecked] = useState(false)
+  const role = currentUser?.role ?? 'visitor'
+  const isAuthed = currentUser !== null
+
   const [toasts, setToasts] = useState([])
   const [notifications, setNotifications] = useState(seedNotifications)
 
@@ -61,24 +59,60 @@ export function AppProvider({ children }) {
     setNotifications((list) => list.map((n) => ({ ...n, read: true })))
   }, [])
 
-  const isAuthed = role !== 'visitor'
-
-  // --- Account (mutable profile fields layered on top of the mock user for the active role) ---
-  const [profileOverrides, setProfileOverrides] = useState({})
-  const currentUser = mockUsers[role] ? { ...mockUsers[role], ...profileOverrides[role] } : null
-
   const updateProfile = useCallback(
     (fields) => {
-      setProfileOverrides((all) => ({ ...all, [role]: { ...all[role], ...fields } }))
+      setCurrentUser((u) => (u ? { ...u, ...fields } : u))
       pushToast({ title: 'Account updated', message: 'Your changes have been saved.' })
+      // NOTE: this updates local state only — there's no PUT /api/account
+      // endpoint yet to persist name/avatar/language changes server-side.
+      // Add one and call it here before this can be trusted across devices.
     },
-    [role, pushToast]
+    [pushToast]
   )
 
-  const deactivateAccount = useCallback(() => {
-    pushToast({ title: 'Account deactivated', message: 'You have been signed out.' })
-    setRoleState('visitor')
-  }, [pushToast])
+  // On first load, ask the backend whether an existing (httpOnly, so
+  // unreadable from here directly) session cookie is still valid. If so,
+  // restore the real signed-in user — this is what makes a page refresh not
+  // silently log the person out. A 401 here just means "visitor", not an error.
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get('/api/auth/me')
+      .then(({ user }) => {
+        if (!cancelled) setCurrentUser(user)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAuthChecked(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Called by Login.jsx after a successful login/register/MFA verification —
+  // the backend has already established the session cookie by this point.
+  const completeAuth = useCallback((user) => {
+    setCurrentUser(user)
+  }, [])
+
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/api/auth/logout')
+    } catch {
+      // Drop local state regardless — an unreachable backend shouldn't trap
+      // someone in a "logged in" UI they can no longer act on.
+    }
+    setCurrentUser(null)
+  }, [])
+
+  const deactivateAccount = useCallback(async () => {
+    // NOTE: no DELETE/deactivate endpoint exists on the backend yet — this
+    // only ends the local session. Add POST /api/account/deactivate and call
+    // it here before this is a real account action rather than a local sign-out.
+    await logout()
+    pushToast({ title: 'Signed out', message: 'Account deactivation needs a backend endpoint — see code comment.' })
+  }, [logout, pushToast])
 
   // --- Greeting: fires once per login (role change away from visitor) and persists until dismissed ---
   const [greeting, setGreeting] = useState(null)
@@ -91,11 +125,6 @@ export function AppProvider({ children }) {
       setGreeting(null)
     }
     prevRole.current = role
-  }, [role])
-
-  const setRole = useCallback((r) => {
-    prevRole.current = role === 'visitor' ? 'visitor' : prevRole.current
-    setRoleState(r)
   }, [role])
 
   // --- Accessibility ---
@@ -128,60 +157,152 @@ export function AppProvider({ children }) {
   const [language, setLanguage] = useState('en')
   const t = useCallback((key) => translate(language, key), [language])
 
+  // --- Developers: fetched from the real API, no more static mock file ---
+  const [developers, setDevelopers] = useState([])
+  useEffect(() => {
+    api
+      .get('/api/developers')
+      .then(({ developers: rows }) => {
+        // Normalize the backend's column names to the shape the rest of the
+        // app expects, and fill in fields the backend doesn't track yet
+        // (online presence, initials) with honest computed defaults rather
+        // than inventing data.
+        setDevelopers(
+          rows.map((d) => ({
+            id: d.id,
+            name: d.name,
+            role: d.headline || 'Developer',
+            avatar: d.avatar_url,
+            portfolio: d.portfolio_url,
+            blog: d.blog_url,
+            github: d.github_url,
+            openSource: d.open_source_url,
+            initials: d.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase(),
+            // No real presence/online tracking exists yet (would need
+            // WebSocket or last-seen heartbeats) — defaulting to false
+            // rather than faking "online" status for a real account.
+            online: false,
+          }))
+        )
+      })
+      .catch(() => {
+        // Backend unreachable — leave the list empty rather than silently
+        // falling back to fake developer names.
+      })
+  }, [])
+
   // Pre-selected service entity carried from a service card / pricing pick into Start a Project
   const [selectedEntity, setSelectedEntity] = useState(null) // { serviceId, subcategoryId }
 
-  // Project requests (Start a Project submissions) — visible to developer/admin dashboards
+  // Project requests — the client's own list comes from the real API.
+  // Developer/admin cross-account views (claim, reply, advance stage) still
+  // operate on local state below, because those backend endpoints don't
+  // exist yet — see the comments on each function for what's still needed.
   const [projectRequests, setProjectRequests] = useState([])
 
-  const submitProjectRequest = useCallback(
-    (data) => {
-      const id = genId('REQ')
-      const demoMs = Math.min(data.estimatedDays ?? 14, 30) * 2000
-      const record = {
-        id,
-        clientName: currentUser?.name ?? 'Anonymous visitor',
-        clientOrg: currentUser?.org ?? null,
-        clientRole: role,
-        description: data.description,
-        projectName: data.projectName ?? '',
-        field: data.field ?? '',
-        projectType: data.projectType ?? '',
-        businessGoal: data.businessGoal ?? '',
-        additionalDescription: data.additionalDescription ?? '',
-        targetPlatforms: data.targetPlatforms ?? [],
-        clientBudget: data.clientBudget ?? null,
-        estimatePrice: data.estimatePrice ?? null,
-        tech: data.tech ?? '',
-        budgetLow: data.budgetLow,
-        budgetHigh: data.budgetHigh,
-        entity: data.entity ?? null,
-        status: 'in-progress',
-        claimedBy: null,
-        replies: [],
-        selectedDeveloperIds: [],
-        devsAssigned: data.devsAssigned ?? null,
-        satisfied: true,
-        timerEnd: Date.now() + demoMs,
-        estimatedDays: data.estimatedDays ?? 14,
-        depositKES: data.depositKES ?? null,
-        progressPercent: 5,
-        stage: 'commit',
-        screenshots: [{ id: 'shot-1', label: 'Kickoff - repo scaffolded', time: 'just now' }],
-        changeRequests: [],
-        createdAt: Date.now(),
-      }
-      setProjectRequests((list) => [record, ...list])
-      pushToast({
-        title: 'Request submitted successfully',
-        message: 'Sent to our developers - confirmation emailed to you.',
-        confetti: true,
+  useEffect(() => {
+    if (!isAuthed) {
+      setProjectRequests([])
+      return
+    }
+    api
+      .get('/api/projects')
+      .then(({ projects }) => {
+        // Adapt the backend's row shape to what the dashboard components
+        // expect. Fields the backend doesn't track yet (stage, screenshots,
+        // replies, claimedBy...) default to sensible empty values — those
+        // still need real columns/endpoints, noted inline below.
+        setProjectRequests(
+          projects.map((p) => ({
+            id: p.id,
+            clientName: currentUser?.name,
+            clientRole: role,
+            description: p.description,
+            entity: { serviceId: p.service_id, subcategoryId: p.subcategory_id },
+            budgetLow: p.price_kes,
+            budgetHigh: p.price_kes,
+            depositKES: p.deposit_kes,
+            status: p.status,
+            claimedBy: null,
+            replies: [],
+            selectedDeveloperIds: [],
+            devsAssigned: null,
+            satisfied: true,
+            timerEnd: null,
+            estimatedDays: null,
+            progressPercent: p.status === 'completed' ? 100 : p.status === 'deposit_paid' ? 10 : 0,
+            stage: 'commit',
+            screenshots: [],
+            changeRequests: [],
+            createdAt: new Date(p.created_at).getTime(),
+          }))
+        )
       })
-      return id
+      .catch(() => {})
+  }, [isAuthed, currentUser, role])
+
+  const submitProjectRequest = useCallback(
+    async (data) => {
+      try {
+        const { project } = await api.post('/api/projects', {
+          serviceId: data.entity?.serviceId ?? data.field ?? 'custom',
+          subcategoryId: data.entity?.subcategoryId ?? data.projectType ?? 'custom',
+          description: data.description,
+          // Sent for display continuity only — the backend always recomputes
+          // the authoritative price server-side and ignores this number.
+          price: data.estimatePrice ?? data.budgetLow,
+        })
+        setProjectRequests((list) => [
+          {
+            id: project.id,
+            clientName: currentUser?.name,
+            clientRole: role,
+            description: project.description,
+            entity: data.entity ?? { serviceId: project.service_id, subcategoryId: project.subcategory_id },
+            budgetLow: project.price_kes,
+            budgetHigh: project.price_kes,
+            depositKES: project.deposit_kes,
+            status: project.status,
+            claimedBy: null,
+            replies: [],
+            selectedDeveloperIds: [],
+            devsAssigned: data.devsAssigned ?? null,
+            satisfied: true,
+            timerEnd: Date.now() + Math.min(data.estimatedDays ?? 14, 30) * 2000,
+            estimatedDays: data.estimatedDays ?? 14,
+            progressPercent: 5,
+            stage: 'commit',
+            screenshots: [{ id: 'shot-1', label: 'Kickoff — repo scaffolded', time: 'just now' }],
+            changeRequests: [],
+            createdAt: Date.now(),
+          },
+          ...list,
+        ])
+        pushToast({
+          title: 'Request submitted successfully',
+          message: 'Sent to our developers — confirmation emailed to you.',
+          confetti: true,
+        })
+        return project.id
+      } catch (err) {
+        pushToast({
+          title: 'Could not submit request',
+          message: err instanceof ApiError ? err.message : 'The server could not be reached.',
+        })
+        return null
+      }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentUser, role]
+    [currentUser, role, pushToast]
   )
+
+  // NOTE: everything below this line (claim/reply/dev-selection/stage
+  // advance/satisfaction/completion, plus clarifications, misconduct
+  // reports, vacancies, applications, logged-in-user admin, and broadcasts)
+  // still operates on local component state, not the backend. None of those
+  // have API routes yet. Treat this as the honest boundary of "real data" in
+  // this app right now — wiring each of these up follows the exact same
+  // pattern as submitProjectRequest above once the corresponding Express
+  // route exists.
 
   const claimRequest = useCallback((requestId, devId) => {
     setProjectRequests((list) =>
@@ -215,7 +336,7 @@ export function AppProvider({ children }) {
           status: 'in-progress',
           timerEnd: Date.now() + demoMs,
           progressPercent: 5,
-          screenshots: [{ id: 'shot-1', label: 'Kickoff - repo scaffolded', time: 'just now' }],
+          screenshots: [{ id: 'shot-1', label: 'Kickoff — repo scaffolded', time: 'just now' }],
         }
       })
     )
@@ -305,18 +426,28 @@ export function AppProvider({ children }) {
   const submitApplication = useCallback(
     (data) => {
       setApplications((list) => [{ id: genId('APP'), time: 'just now', ...data }, ...list])
-      pushToast({ title: 'Application sent', message: "Emailed to our hiring admin - we'll follow up if it's a fit." })
+      pushToast({ title: 'Application sent', message: "Emailed to our hiring admin — we'll follow up if it's a fit." })
     },
     [pushToast]
   )
 
-  const [loggedInUsers, setLoggedInUsers] = useState([
-    { id: 'u1', name: 'Gideon Okune', role: 'client', email: 'rhea@ledgerly.io', online: true },
-    { id: 'u2', name: 'Jesicah Kageha', role: 'enduser', email: 'alex@example.com', online: true },
-    { id: 'u3', name: 'Nathan Okello', role: 'developer', email: 'sarah@aspect.dev', online: true },
-    { id: 'u4', name: 'Nevleen', role: 'developer', email: 'marcus@aspect.dev', online: false },
-    { id: 'u5', name: 'Moses', role: 'client', email: 'jon@vitalpath.io', online: false },
-  ])
+  const [loggedInUsers, setLoggedInUsers] = useState([])
+  // Real data from the backend's admin-only user list — note the route path
+  // itself is deliberately non-default (see ADMIN_ROUTE_PREFIX in the
+  // backend's .env), so VITE_ADMIN_ROUTE_PREFIX must match it.
+  useEffect(() => {
+    if (role !== 'admin') return
+    const prefix = import.meta.env.VITE_ADMIN_ROUTE_PREFIX ?? 'ops-console-7f3a'
+    api
+      .get(`/api/${prefix}/users`)
+      .then(({ users }) =>
+        // "online" here is approximated from lockout state, not a real
+        // presence signal — there's no session-presence tracking on the
+        // backend yet. Good enough for now, not something to build UI trust on.
+        setLoggedInUsers(users.map((u) => ({ id: u.id, name: u.name, role: u.role, email: u.email, online: !u.locked_until })))
+      )
+      .catch(() => {})
+  }, [role])
 
   const removeUser = useCallback((id) => setLoggedInUsers((list) => list.filter((u) => u.id !== id)), [])
   const updateUser = useCallback(
@@ -338,14 +469,16 @@ export function AppProvider({ children }) {
     theme,
     toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
     role,
-    setRole,
     isAuthed,
+    authChecked,
     currentUser,
+    completeAuth,
+    logout,
     updateProfile,
     deactivateAccount,
     greeting,
     dismissGreeting: () => setGreeting(null),
-    developers: seedDevelopers,
+    developers,
     toasts,
     pushToast,
     dismissToast,

@@ -17,15 +17,15 @@ const marketingLinks = [
 ]
 
 const roleLabels = {
-  visitor: 'Visitor',
+  visitor: 'Guest',
   client: 'Client',
   enduser: 'End-User',
   developer: 'Developer',
-  admin: 'Admin',
+  admin: 'Sudo',
 }
 
 export default function Navbar() {
-  const { role, setRole, isAuthed, currentUser, notifications, markNotificationRead, markAllRead } = useApp()
+  const { role, isAuthed, currentUser, notifications, markNotificationRead, markAllRead, logout } = useApp()
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -44,9 +44,13 @@ export default function Navbar() {
     setSearchOpen((v) => (mode === 'toggle' ? !v : mode))
   }
 
-  function logOut() {
-    setRole('visitor')
+  // There's no more "instant preview" of another role — roles come from real
+  // accounts now. Switching who you're signed in as means signing out of
+  // this one and logging into the other on the login page.
+  async function logOutAndSwitch() {
     setProfileOpen(false)
+    await logout()
+    navigate('/login')
   }
 
   return (
@@ -186,23 +190,12 @@ export default function Navbar() {
               </button>
             </Tooltip>
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-48 glass rounded-xl p-1.5 animate-fade_in">
-                <div className="px-3 py-1.5 text-[10px] font-mono uppercase text-fg-muted">Preview role</div>
-                {Object.entries(roleLabels).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setRole(key)
-                      setProfileOpen(false)
-                    }}
-                    className={clsx(
-                      'w-full text-left px-3 py-2 text-sm rounded-lg focus-ring',
-                      role === key ? 'bg-signal/20 text-signal-bright' : 'text-fg-secondary hover:bg-surface-1'
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="absolute right-0 mt-2 w-52 glass rounded-xl p-1.5 animate-fade_in">
+                <div className="px-3 py-2">
+                  <div className="text-sm text-fg-primary truncate">{currentUser?.name}</div>
+                  <div className="text-xs text-fg-muted truncate">{currentUser?.email}</div>
+                  <div className="text-[10px] font-mono uppercase text-signal-bright mt-1">{roleLabels[role]}</div>
+                </div>
                 {isAuthed && (
                   <>
                     <div className="my-1 border-t border-subtle" />
@@ -216,7 +209,7 @@ export default function Navbar() {
                       <Settings size={14} /> Settings
                     </button>
                     <button
-                      onClick={logOut}
+                      onClick={logOutAndSwitch}
                       className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm rounded-lg text-bad hover:bg-surface-1 focus-ring"
                     >
                       <LogOut size={14} /> Log out
@@ -246,18 +239,7 @@ export default function Navbar() {
               {l.label}
             </NavLink>
           ))}
-          <div className="px-3 py-2 text-xs font-mono text-fg-muted">Demo role</div>
-          <div className="flex flex-wrap gap-1.5 px-3 pb-2">
-            {Object.entries(roleLabels).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setRole(key)}
-                className={clsx('px-2.5 py-1 text-xs rounded-full border focus-ring', role === key ? 'border-signal text-signal-bright' : 'border-subtle text-fg-secondary')}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <div className="px-3 py-2 text-xs font-mono text-fg-muted">Pick your role when you sign up on the login page.</div>
           <Link
             to="/login"
             onClick={() => setMobileOpen(false)}

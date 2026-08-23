@@ -19,9 +19,14 @@ import Company from './pages/Company.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Settings from './pages/Settings.jsx'
 import Login from './pages/Login.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
+import VerifyEmail from './pages/VerifyEmail.jsx'
 import WarRoomRetired from './pages/WarRoomRetired.jsx'
 import Legal from './pages/Legal.jsx'
 import NotFound from './pages/NotFound.jsx'
+
+const AUTH_PAGES = ['/login', '/forgot-password', '/reset-password', '/verify-email']
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -30,6 +35,27 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  const { pathname } = useLocation()
+  const isAuthPage = AUTH_PAGES.includes(pathname)
+
+  if (isAuthPage) {
+    // Auth pages are deliberately chrome-free — no sidebar, navbar, or
+    // breadcrumb — so there's nothing to distract from (or leak app
+    // structure to someone) before a session exists.
+    return (
+      <div className="min-h-screen">
+        <ScrollToTop />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+        </Routes>
+        <Toasts />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex">
       <ScrollToTop />
@@ -53,7 +79,6 @@ export default function App() {
             <Route path="/contact" element={<Company page="contact" />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/login" element={<Login />} />
             <Route path="/war-room/:id" element={<WarRoomRetired />} />
             <Route path="/legal/privacy" element={<Legal page="privacy" />} />
             <Route path="/legal/terms" element={<Legal page="terms" />} />

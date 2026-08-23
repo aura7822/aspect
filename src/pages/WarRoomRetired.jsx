@@ -24,7 +24,7 @@ export default function WarRoomRetired() {
         <span className="absolute inset-0 rounded-full border border-signal/30 animate-ping" style={{ animationDuration: '2.4s' }} />
         <span className="absolute inset-3 rounded-full border border-signal/20 animate-ping" style={{ animationDuration: '2.4s', animationDelay: '0.4s' }} />
         <div className="relative w-16 h-16 rounded-2xl glass flex items-center justify-center">
-          <Radio size={26} className="text-signal-bright" />
+          <Radio size={46} className="text-signal-bright" />
         </div>
       </div>
 

@@ -5,9 +5,13 @@ import DeveloperInteractionHub from '../components/DeveloperInteractionHub.jsx'
 import ReportMisconduct from '../components/ReportMisconduct.jsx'
 import WhyYouMatter from '../components/WhyYouMatter.jsx'
 import { HERO_MEDIA_URL, HERO_MEDIA_TYPE } from '../data/brand.js'
-import { developers } from '../data/developers.js'
+import { useApp } from '../context/AppContext.jsx'
 
 export default function Developers() {
+  // Real data from GET /api/developers (see AppContext) — no more static
+  // mock file. If the backend has no developer accounts yet, this list is
+  // genuinely empty rather than showing invented names.
+  const { developers } = useApp()
   return (
     <div>
       {/* Dynamic banner */}
@@ -44,7 +48,7 @@ export default function Developers() {
                 </div>
               </div>
 
-              <div className="text-[10px] font-mono uppercase tracking-wide text-fg-muted mb-2">Tasks chart</div>
+              <div className="text-[10px] font-mono uppercase tracking-wide text-fg-muted mb-2">Activity chart</div>
               <ContributionHeatmap seed={d.id.length + d.name.length} />
 
               <div className="grid grid-cols-2 gap-2 mt-4">

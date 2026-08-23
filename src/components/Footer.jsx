@@ -8,25 +8,25 @@ const columns = [
     title: 'Studio',
     links: [
       { to: '/services', label: '☭ Services' },
-      { to: '/pricing', label: '🄏 Pricing Plans' },
+      { to: '/pricing', label: ' Pricing Plans' },
       { to: '/about', label: '🛈 About' },
-      { to: '/careers', label: '💼 Careers' },
+      { to: '/careers', label: ' Careers' },
     ],
   },
   {
     title: 'Proof',
     links: [
-      { to: '/services', label: '🖋 Case studies' },
-      { to: '/transparency', label: '🎔 Health dashboard' },
-      { to: '/changelog', label: '䀹 Changelog' },
-      { to: '/blog', label: '🎙 Blog' },
+      { to: '/services', label: ' Case studies' },
+      { to: '/transparency', label: ' Health dashboard' },
+      { to: '/changelog', label: ' Changelog' },
+      { to: '/blog', label: ' Blog' },
     ],
   },
   {
     title: 'Company',
     links: [
-      { to: '/contact', label: '🕾 Contact' },
-      { to: '/legal/privacy', label: '🗒 Privacy' },
+      { to: '/contact', label: ' Contact' },
+      { to: '/legal/privacy', label: ' Privacy' },
       { to: '/legal/terms', label: '⚚ Terms' },
     ],
   },

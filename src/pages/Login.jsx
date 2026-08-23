@@ -1,39 +1,107 @@
 import { useState } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
-import { LogIn, UserPlus, Briefcase, User, Code2, ShieldCheck } from 'lucide-react'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
+import { LogIn, UserPlus, Briefcase, User, Code2, ShieldCheck, Eye, EyeOff, ShieldQuestion, Mail, Armchair } from 'lucide-react'
 import clsx from 'clsx'
 import GlassCard from '../components/GlassCard.jsx'
 import Logo from '../components/Logo.jsx'
 import { useApp } from '../context/AppContext.jsx'
+import { api, ApiError } from '../lib/apiClient.js'
 
 const roleOptions = [
   { id: 'client', label: 'Client', icon: Briefcase, blurb: 'I have a project I want built' },
   { id: 'enduser', label: 'End-User', icon: User, blurb: "I use a product Aspect's already shipped" },
   { id: 'developer', label: 'Developer', icon: Code2, blurb: "I'm part of the Aspect team" },
-  { id: 'admin', label: 'Sudo', icon: ShieldCheck, blurb: 'System Orchestration' },
+  { id: 'admin', label: 'Sudo', icon: ShieldCheck, blurb: 'I manage the Project' },
+  { id: 'visitor', label: 'Guest', icon: Armchair, blurb: 'I want basic startup  naviation' },
 ]
-
 export default function Login() {
-  const { role, setRole, pushToast } = useApp()
+  const { role, completeAuth, pushToast } = useApp()
   const navigate = useNavigate()
-  const [mode, setMode] = useState('login')
+
+  // 'login' | 'signup' | 'awaiting-verification' | 'mfa'
+  const [stage, setStage] = useState('login')
   const [selectedRole, setSelectedRole] = useState('client')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  // MFA step state
+  const [challengeId, setChallengeId] = useState(null)
+  const [mfaCode, setMfaCode] = useState('')
 
   if (role !== 'visitor') return <Navigate to="/dashboard" replace />
 
-  const valid = mode === 'login' ? email.trim() && password.trim() : name.trim() && email.trim() && password.trim()
+  const isSignup = stage === 'signup'
+  const valid = isSignup ? name.trim() && email.trim() && password.trim() : email.trim() && password.trim()
 
-  function submit() {
-    if (!valid) return
-    setRole(selectedRole)
-    pushToast({
-      title: mode === 'login' ? 'Signed in' : 'Account created',
-      message: `You're in as ${roleOptions.find((r) => r.id === selectedRole)?.label}.`,
-    })
+  async function completeLogin(user) {
+    completeAuth(user)
+    pushToast({ title: 'Signed in', message: `You're in as ${user.name}.` })
     navigate('/dashboard')
+  }
+
+  async function submit() {
+    if (!valid || loading) return
+    setError(null)
+    setLoading(true)
+    try {
+      if (isSignup) {
+        await api.post('/api/auth/register', {
+          email: email.trim(),
+          password,
+          name: name.trim(),
+          role: selectedRole,
+          formRenderedAt: Date.now() - 5000,
+        })
+        // No session yet — the account can't log in until the email link is
+        // clicked. Real signup flows don't skip this step.
+        setStage('awaiting-verification')
+      } else {
+        const result = await api.post('/api/auth/login', { email: email.trim(), password })
+        if (result.mfaRequired) {
+          setChallengeId(result.challengeId)
+          setStage('mfa')
+        } else {
+          await completeLogin(result.user)
+        }
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.body?.error === 'EMAIL_NOT_VERIFIED') {
+        setStage('awaiting-verification')
+        setError(null)
+      } else {
+        setError(err instanceof ApiError ? err.message : 'Could not reach the server. Is the backend running?')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function submitMfa() {
+    if (!mfaCode.trim() || loading) return
+    setError(null)
+    setLoading(true)
+    try {
+      const { user } = await api.post('/api/auth/mfa/verify', { challengeId, code: mfaCode.trim() })
+      await completeLogin(user)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not reach the server.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function resendVerification() {
+    setLoading(true)
+    try {
+      await api.post('/api/auth/resend-verification', { email: email.trim() })
+      pushToast({ title: 'Email sent', message: 'Check your inbox for a new verification link.' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -46,59 +114,164 @@ export default function Login() {
         </div>
 
         <GlassCard className="p-6 md:p-8">
-          <div className="flex gap-1 mb-6 border border-subtle rounded-lg p-1">
-            <button
-              onClick={() => setMode('login')}
-              className={clsx('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-colors focus-ring', mode === 'login' ? 'bg-signal text-white' : 'text-fg-muted')}
-            >
-              <LogIn size={14} /> Log in
-            </button>
-            <button
-              onClick={() => setMode('signup')}
-              className={clsx('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-colors focus-ring', mode === 'signup' ? 'bg-signal text-white' : 'text-fg-muted')}
-            >
-              <UserPlus size={14} /> Sign up
-            </button>
-          </div>
-
-          <div className="mb-5">
-            <div className="text-xs font-mono uppercase tracking-wide text-fg-muted mb-2">I'm a...</div>
-            <div className="grid grid-cols-2 gap-2">
-              {roleOptions.map((r) => (
+          {stage === 'awaiting-verification' && (
+            <div className="text-center py-4">
+              <Mail size={28} className="text-signal-bright mx-auto mb-4" />
+              <h3 className="font-display text-lg mb-2">Check your email</h3>
+              <p className="text-sm text-fg-muted mb-6">
+                We sent a verification link to <span className="text-fg-secondary">{email}</span>. Click it, then come
+                back and log in.
+              </p>
+              <button
+                onClick={resendVerification}
+                disabled={loading}
+                className="text-sm text-signal-bright hover:underline focus-ring disabled:opacity-40"
+              >
+                Resend verification email
+              </button>
+              <div className="mt-6 pt-6 border-t border-subtle">
                 <button
-                  key={r.id}
-                  onClick={() => setSelectedRole(r.id)}
-                  className={clsx(
-                    'flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-colors focus-ring',
-                    selectedRole === r.id ? 'border-signal bg-signal/10' : 'border-subtle hover:border-strong'
-                  )}
+                  onClick={() => setStage('login')}
+                  className="text-sm text-fg-secondary hover:text-fg-primary focus-ring"
                 >
-                  <r.icon size={15} className={selectedRole === r.id ? 'text-signal-bright' : 'text-fg-muted'} />
-                  <span className="text-sm text-fg-primary">{r.label}</span>
-                  <span className="text-[11px] text-fg-muted leading-snug">{r.blurb}</span>
+                  ← Back to log in
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="space-y-3">
-            {mode === 'signup' && (
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="input-field" />
-            )}
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" className="input-field" />
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Password" className="input-field" />
-          </div>
+          {stage === 'mfa' && (
+            <div>
+              <div className="text-center mb-6">
+                <ShieldQuestion size={28} className="text-signal-bright mx-auto mb-4" />
+                <h3 className="font-display text-lg mb-1">Enter your 6-digit code</h3>
+                <p className="text-sm text-fg-muted">Open your authenticator app to get the current code.</p>
+              </div>
+              <input
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyDown={(e) => e.key === 'Enter' && submitMfa()}
+                placeholder="000000"
+                inputMode="numeric"
+                autoFocus
+                className="input-field text-center text-2xl tracking-[0.5em] font-mono"
+              />
+              {error && (
+                <p className="text-sm text-bad mt-3 text-center" role="alert">
+                  {error}
+                </p>
+              )}
+              <button
+                onClick={submitMfa}
+                disabled={mfaCode.length !== 6 || loading}
+                className="w-full mt-4 py-2.5 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright transition-colors focus-ring disabled:opacity-40"
+              >
+                {loading ? 'Verifying…' : 'Verify'}
+              </button>
+              <button
+                onClick={() => {
+                  setStage('login')
+                  setMfaCode('')
+                  setError(null)
+                }}
+                className="w-full mt-3 text-sm text-fg-muted hover:text-fg-primary focus-ring"
+              >
+                ← Back to log in
+              </button>
+            </div>
+          )}
 
-          <button
-            onClick={submit}
-            disabled={!valid}
-            className="w-full mt-6 py-2.5 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright transition-colors focus-ring disabled:opacity-40"
-          >
-            {mode === 'login' ? 'Log in' : 'Create account'}
-          </button>
-          <p className="text-[11px] text-fg-muted mt-3 text-center">
-            By proceeding you conform to our terms of services
-          </p>
+          {(stage === 'login' || stage === 'signup') && (
+            <>
+              <div className="flex gap-1 mb-6 border border-subtle rounded-lg p-1">
+                <button
+                  onClick={() => setStage('login')}
+                  className={clsx('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-colors focus-ring', stage === 'login' ? 'bg-signal text-white' : 'text-fg-muted')}
+                >
+                  <LogIn size={14} /> Log in
+                </button>
+                <button
+                  onClick={() => setStage('signup')}
+                  className={clsx('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-colors focus-ring', stage === 'signup' ? 'bg-signal text-white' : 'text-fg-muted')}
+                >
+                  <UserPlus size={14} /> Sign up
+                </button>
+              </div>
+
+              {isSignup && (
+                <div className="mb-5">
+                  <div className="text-xs font-mono uppercase tracking-wide text-fg-muted mb-2">I'm a...</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {roleOptions.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => setSelectedRole(r.id)}
+                        className={clsx(
+                          'flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-colors focus-ring',
+                          selectedRole === r.id ? 'border-signal bg-signal/10' : 'border-subtle hover:border-strong'
+                        )}
+                      >
+                        <r.icon size={15} className={selectedRole === r.id ? 'text-signal-bright' : 'text-fg-muted'} />
+                        <span className="text-sm text-fg-primary">{r.label}</span>
+                        <span className="text-[11px] text-fg-muted leading-snug">{r.blurb}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {isSignup && (
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="input-field" />
+                )}
+                <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" className="input-field" />
+                <div className="relative">
+                  <input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && submit()}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Password"
+                    className="input-field pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg-primary focus-ring"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              {!isSignup && (
+                <div className="flex justify-end mt-2">
+                  <Link to="/forgot-password" className="text-xs text-signal-bright hover:underline focus-ring">
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
+
+              {error && (
+                <p className="text-sm text-bad mt-4 text-center" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <button
+                onClick={submit}
+                disabled={!valid || loading}
+                className="w-full mt-4 py-2.5 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright transition-colors focus-ring disabled:opacity-40"
+              >
+                {loading ? 'Please wait…' : isSignup ? 'Create account' : 'Log in'}
+              </button>
+              <p className="text-[11px] text-fg-muted mt-3 text-center">
+                NOTICE: By proceeding you agree to our terms of service
+              </p>
+            </>
+          )}
         </GlassCard>
       </div>
     </div>
