@@ -42,6 +42,11 @@ export default function App() {
     const elements = document.querySelectorAll('.reveal')
     if (!elements.length) return
 
+    if (!('IntersectionObserver' in window)) {
+      elements.forEach((el) => el.classList.add('in-view'))
+      return
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
