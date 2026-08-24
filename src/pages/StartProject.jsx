@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Upload, Smartphone, Wallet, Bitcoin, ArrowRight } from 'lucide-react'
 import GlassCard from '../components/GlassCard.jsx'
 import CountdownTimer from '../components/CountdownTimer.jsx'
@@ -26,7 +26,8 @@ function clamp(n, min, max) {
 }
 
 export default function StartProject() {
-  const { selectedEntity, setSelectedEntity, submitProjectRequest, projectRequests, completeRequest, currentUser, pushToast } = useApp()
+  const { selectedEntity, setSelectedEntity, submitProjectRequest, projectRequests, completeRequest, currentUser, pushToast, role } = useApp()
+  const navigate = useNavigate()
 
   const [pickedEntity] = useState(() =>
     selectedEntity ? findEntity(selectedEntity.serviceId, selectedEntity.subcategoryId) : null
@@ -47,6 +48,10 @@ export default function StartProject() {
   const [sketchName, setSketchName] = useState(null)
   const [agreed, setAgreed] = useState(false)
   const [touched, setTouched] = useState(false)
+
+  if (role === 'visitor') {
+    return <Navigate to="/login" replace state={{ from: '/start-a-project' }} />
+  }
 
   const typeMultiplier = { 'new-feature': 0.6, 'bug-fix': 0.35, 'new-project': 1 }[projectType] ?? 0.6
 
@@ -85,6 +90,11 @@ export default function StartProject() {
   const formValid = projectName.trim() && field && projectType && businessGoal.trim() && targetPlatforms.length > 0 && agreed
 
   function submitForm() {
+    if (role === 'visitor') {
+      pushToast({ title: 'Please log in', message: 'Create an account to submit a project request.' })
+      navigate('/login', { state: { from: '/start-a-project' } })
+      return
+    }
     setTouched(true)
     if (!formValid) return
     const id = submitProjectRequest({
@@ -329,7 +339,7 @@ export default function StartProject() {
             to="/dashboard"
             className="mt-6 flex items-center justify-center gap-2 text-sm text-signal-bright hover:underline focus-ring"
           >
-            <ArrowLeft size={15} /> Back to dashboard - view real-time progress
+            <ArrowLeft size={15} /> Back to dashboard - peek at real-time progress
           </Link>
         </GlassCard>
       )}

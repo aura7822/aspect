@@ -1,13 +1,16 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { Play, Volume2, VolumeX, ArrowLeft } from 'lucide-react'
 import { caseStudies } from '../data/caseStudies.js'
 import TechBadge from '../components/TechBadge.jsx'
 import GlassCard from '../components/GlassCard.jsx'
 import NotFound from './NotFound.jsx'
+import { useApp } from '../context/AppContext.jsx'
 
 export default function CaseStudyDetail() {
   const { slug } = useParams()
+  const navigate = useNavigate()
+  const { role, pushToast } = useApp()
   const study = caseStudies.find((c) => c.slug === slug)
   const [muted, setMuted] = useState(true)
   const [playing, setPlaying] = useState(false)
@@ -67,9 +70,19 @@ export default function CaseStudyDetail() {
 
       <GlassCard className="p-8 text-center">
         <h3 className="font-display text-xl mb-2">Have something like this in mind?</h3>
-        <Link to="/start-a-project" className="inline-flex px-5 py-2.5 rounded-lg bg-signal text-white text-sm font-medium focus-ring mt-2">
-          Start a project
-        </Link>
+        <button
+          onClick={() => {
+            if (role === 'visitor') {
+              pushToast({ title: 'Please log in', message: 'Sign in to launch a project.' })
+              navigate('/login', { state: { from: `/case-studies/${slug}` } })
+              return
+            }
+            navigate('/start-a-project')
+          }}
+          className="inline-flex px-5 py-2.5 rounded-lg bg-signal text-white text-sm font-medium focus-ring mt-2"
+        >
+          Launch a project
+        </button>
       </GlassCard>
     </div>
   )

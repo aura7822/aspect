@@ -7,10 +7,10 @@
 :root {
   /* Dark: charcoal black with a rich golden-brown accent */
   color-scheme: dark;
-  --fg-primary: #F0E6D2;
-  --fg-secondary: #C9BBA0;
-  --fg-tertiary: #A2937A;
-  --fg-muted: #7C7059;
+  --fg-primary: #554525;
+  --fg-secondary: #acacace3;
+  --fg-tertiary: #dedf7e;
+  --fg-muted: #654213;
   --surface-1: rgba(240,220,180,0.05);
   --surface-2: rgba(240,220,180,0.09);
   --surface-3: rgba(240,220,180,0.14);
@@ -73,6 +73,7 @@ html.light {
 body {
   background-color: var(--page-bg);
   color: var(--fg-primary);
+  overflow-x: hidden;
   @apply font-body antialiased;
 }
 

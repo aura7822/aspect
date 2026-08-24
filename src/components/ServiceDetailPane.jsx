@@ -6,10 +6,17 @@ import { translateService } from '../data/serviceCatalogI18n.js'
 
 export default function ServiceDetailPane({ service: rawService }) {
   const navigate = useNavigate()
-  const { setSelectedEntity, language } = useApp()
+  const { setSelectedEntity, language, role, pushToast } = useApp()
   const service = translateService(rawService, language)
 
   function chooseSubcategory(sub) {
+    if (role === 'visitor') {
+      setSelectedEntity({ serviceId: service.id, subcategoryId: sub.id })
+      pushToast({ title: 'Identity required', message: 'Please log in or sign up to continue with this service.' })
+      navigate('/login', { state: { from: '/pricing' } })
+      return
+    }
+
     setSelectedEntity({ serviceId: service.id, subcategoryId: sub.id })
     navigate('/pricing')
   }

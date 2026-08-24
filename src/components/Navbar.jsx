@@ -117,7 +117,7 @@ export default function Navbar() {
               to="/start-a-project"
               className="hidden md:inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-signal text-white hover:bg-signal-bright transition-colors focus-ring"
             >
-              Start a project
+              Launch a project
             </Link>
           )}
 
@@ -248,7 +248,7 @@ export default function Navbar() {
             Log in
           </Link>
           <Link to="/start-a-project" onClick={() => setMobileOpen(false)} className="mt-2 inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg bg-signal text-white">
-            Start a project
+            Launch a project
           </Link>
         </div>
       )}

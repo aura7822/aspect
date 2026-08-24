@@ -25,7 +25,7 @@ export default function Developers() {
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-signal/15 via-transparent to-gold/10" />
         )}
-        <div className="absolute inset-0" style={{ backgroundColor: 'var(--page-bg)', opacity: 0.55 }} />
+        <div className="absolute inset-0" style={{ backgroundColor: 'var(--page-bg)', opacity: 0.75 }} />
         <div className="absolute inset-0 flex items-end">
           <div className="container-page pb-6">
             <h1 className="font-display text-3xl text-fg-primary">Developers</h1>

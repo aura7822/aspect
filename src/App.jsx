@@ -38,6 +38,26 @@ export default function App() {
   const { pathname } = useLocation()
   const isAuthPage = AUTH_PAGES.includes(pathname)
 
+  useEffect(() => {
+    const elements = document.querySelectorAll('.reveal')
+    if (!elements.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view')
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.16, rootMargin: '0px 0px -8% 0px' }
+    )
+
+    elements.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [pathname])
+
   if (isAuthPage) {
     // Auth pages are deliberately chrome-free — no sidebar, navbar, or
     // breadcrumb — so there's nothing to distract from (or leak app
@@ -45,7 +65,7 @@ export default function App() {
     return (
       <div className="min-h-screen">
         <ScrollToTop />
-        <Routes>
+        <Routes key={pathname}>
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -63,8 +83,8 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <Navbar />
         <Breadcrumb />
-        <main className="flex-1">
-          <Routes>
+        <main className="flex-1 overflow-x-hidden">
+          <Routes key={pathname}>
             <Route path="/" element={<Home />} />
             <Route path="/services" element={<Services />} />
             <Route path="/case-studies/:slug" element={<CaseStudyDetail />} />

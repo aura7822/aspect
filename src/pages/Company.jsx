@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import GlassCard from '../components/GlassCard.jsx'
 import { useApp } from '../context/AppContext.jsx'
 
@@ -26,7 +26,8 @@ function About() {
 }
 
 function Careers() {
-  const { vacancies, submitApplication, role } = useApp()
+  const navigate = useNavigate()
+  const { vacancies, submitApplication, role, pushToast } = useApp()
   const [openFor, setOpenFor] = useState(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -36,6 +37,14 @@ function Careers() {
 
   // Vacancy listings are only for clients, end-users, and visitors — not staff.
   if (role === 'developer' || role === 'admin') return <Navigate to="/dashboard" replace />
+
+  useEffect(() => {
+    if (role === 'visitor') {
+      pushToast({ title: 'Please log in', message: 'Sign in to apply for a role.' })
+    }
+  }, [pushToast, role])
+
+  if (role === 'visitor') return <Navigate to="/login" replace state={{ from: '/careers' }} />
 
   const openRoles = vacancies.filter((v) => v.open)
 
@@ -119,7 +128,7 @@ function Contact() {
   return (
     <div className="container-page py-16 max-w-lg">
       <h1 className="font-display text-3xl mb-2">Contact</h1>
-      <p className="text-fg-muted mb-8">General inquiries only — for project requests, use Start a Project.</p>
+      <p className="text-fg-muted mb-8">General inquiries only — for project requests, use Launch a Project.</p>
       {sent ? (
         <GlassCard className="p-6 text-center">
           <p className="text-fg-secondary">Thanks — your message is in. We'll reply soon.</p>

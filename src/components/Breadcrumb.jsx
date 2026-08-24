@@ -11,7 +11,7 @@ const labels = {
   about: 'About',
   careers: 'Careers',
   contact: 'Contact',
-  'start-a-project': 'Start a project',
+  'start-a-project': 'Launch a project',
   dashboard: 'Dashboard',
   legal: 'Legal',
   'case-studies': 'Case study',

@@ -29,9 +29,7 @@ export default function Home() {
       <section className="relative container-page pt-16 pb-8 overflow-hidden">
         <HeroVideoBackground />
         <div className="max-w-2xl">
-          <span className="font-mono text-xs text-signal-bright border border-signal/30 rounded-full px-3 py-1">
-            Intelligent software systems
-          </span>
+          
           <TypingHeadline lines={[t('hero_line1'), t('hero_line2')]} loop className="mt-5" />
           <p className="text-fg-muted mt-5 text-base md:text-lg max-w-md leading-relaxed">
             Aspect designs, builds, and ships full-stack products, then keeps the engineering visible
@@ -46,9 +44,9 @@ export default function Home() {
             </Link>
             <Link
               to="/services"
-              className="px-5 py-3 rounded-lg border border-subtle text-sm font-medium text-fg-secondary hover:border-strong transition-colors focus-ring"
+              className="px-5 py-3 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright transition-colors focus-ring"
             >
-              See our work
+              Peek at our works
             </Link>
           </div>
         </div>
@@ -69,7 +67,7 @@ export default function Home() {
       <section className="container-page py-16">
         <h2 className="font-display text-2xl mb-1 reveal in-view">{t('what_we_build')}</h2>
         <p className="text-fg-muted mb-8 reveal in-view">
-          Autonomous List : click a card for its tech stack and pricing, or launch a fresh project.
+          Autonomous Display : select a card for its tech stack and pricing, or launch a fresh project.
         </p>
 
         <div className="grid lg:grid-cols-2 gap-6">
@@ -96,11 +94,11 @@ export default function Home() {
       <section className="container-page py-16">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="font-display text-2xl mb-1">Your dashboard</h2>
+            <h2 className="font-display text-2xl mb-1">My dashboard🗠</h2>
             <p className="text-fg-muted">Live status on whatever you've got in motion with us.</p>
           </div>
           <Link to="/dashboard" className="text-sm text-signal-bright hover:underline focus-ring">
-            Invoke full dashboard →
+            Invoke full dashboard ⮚
           </Link>
         </div>
         <ProjectProgressPanel />

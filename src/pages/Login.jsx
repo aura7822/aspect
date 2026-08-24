@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useNavigate, Navigate, Link } from 'react-router-dom'
-import { LogIn, UserPlus, Briefcase, User, Code2, ShieldCheck, Eye, EyeOff, ShieldQuestion, Mail, Armchair } from 'lucide-react'
+import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom'
+import { LogIn, UserPlus, Briefcase, User, Code2, ShieldCheck, Eye, EyeOff, ShieldQuestion, Mail, Armchair, Cookie } from 'lucide-react'
 import clsx from 'clsx'
 import GlassCard from '../components/GlassCard.jsx'
 import Logo from '../components/Logo.jsx'
@@ -15,8 +15,9 @@ const roleOptions = [
   { id: 'visitor', label: 'Guest', icon: Armchair, blurb: 'I want basic startup  naviation' },
 ]
 export default function Login() {
-  const { role, completeAuth, pushToast } = useApp()
+  const { role, isAuthed, completeAuth, pushToast } = useApp()
   const navigate = useNavigate()
+  const location = useLocation()
 
   // 'login' | 'signup' | 'awaiting-verification' | 'mfa'
   const [stage, setStage] = useState('login')
@@ -27,12 +28,23 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [cookieConsent, setCookieConsent] = useState(() => {
+    if (typeof window === 'undefined') return 'pending'
+    return localStorage.getItem('aspect-cookie-consent') ?? 'pending'
+  })
+
+  function saveCookieChoice(choice) {
+    if (typeof window !== 'undefined') localStorage.setItem('aspect-cookie-consent', choice)
+    setCookieConsent(choice)
+  }
 
   // MFA step state
   const [challengeId, setChallengeId] = useState(null)
   const [mfaCode, setMfaCode] = useState('')
 
-  if (role !== 'visitor') return <Navigate to="/dashboard" replace />
+  if (isAuthed && role !== 'visitor') return <Navigate to="/dashboard" replace />
+
+  const from = location.state?.from || '/dashboard'
 
   const isSignup = stage === 'signup'
   const valid = isSignup ? name.trim() && email.trim() && password.trim() : email.trim() && password.trim()
@@ -40,7 +52,7 @@ export default function Login() {
   async function completeLogin(user) {
     completeAuth(user)
     pushToast({ title: 'Signed in', message: `You're in as ${user.name}.` })
-    navigate('/dashboard')
+    navigate(from, { replace: true })
   }
 
   async function submit() {
@@ -107,6 +119,38 @@ export default function Login() {
   return (
     <div className="container-page py-16 flex justify-center">
       <div className="w-full max-w-md">
+        {cookieConsent === 'pending' && (
+          <div className="fixed inset-x-0 bottom-0 z-50 bg-ink-900/95 border-t border-subtle px-4 py-4 shadow-[0_-12px_30px_rgba(0,0,0,0.35)]">
+            <div className="mx-auto max-w-5xl flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-2xl flex items-start gap-3">
+                <div className="mt-0.5 rounded-full bg-signal/10 p-2 text-signal-bright">
+                  <Cookie size={16} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-white">Cookies &amp; session preferences</div>
+                  <p className="text-xs text-fg-muted mt-1 leading-relaxed">
+                    We use cookies to keep your session secure, remember your preferences, and improve the experience. You can accept all or keep it to essential cookies only.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => saveCookieChoice('essential')}
+                  className="px-3.5 py-2 rounded-lg border border-subtle text-sm text-fg-secondary hover:border-strong focus-ring"
+                >
+                  Essential only
+                </button>
+                <button
+                  onClick={() => saveCookieChoice('accepted')}
+                  className="px-3.5 py-2 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright focus-ring"
+                >
+                  Accept all
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col items-center mb-8">
           <Logo size={36} />
           <h1 className="font-display text-2xl mt-3">Welcome to Aspect™</h1>

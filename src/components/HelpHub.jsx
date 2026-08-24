@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { LifeBuoy, X, Send, StickyNote, Accessibility as AccessibilityIcon, MessageCircle, Volume2, VolumeX, Sun, Moon, Type } from 'lucide-react'
 import clsx from 'clsx'
 import { useApp } from '../context/AppContext.jsx'
-import { developers } from '../data/developers.js'
 import RealisticIconTile from './RealisticIconTile.jsx'
 import WhatsAppIcon from './icons/WhatsAppIcon.jsx'
 import StatusDot from './StatusDot.jsx'
 import useClickOutside from '../hooks/useClickOutside.js'
 import { languages } from '../data/i18n.js'
+import { generateAspectAIReply } from '../lib/geminiClient.js'
 
 const tabs = [
   { id: 'chat', label: 'Chat', icon: MessageCircle },
@@ -56,7 +57,7 @@ export default function HelpHub() {
           </div>
 
           <a
-            href="https://wa.me/000000000"
+            href="https://wa.me/+254119750041"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2.5 px-3.5 py-3 border-t border-subtle hover:bg-surface-1 transition-colors focus-ring"
@@ -64,7 +65,7 @@ export default function HelpHub() {
             <RealisticIconTile size={30} tone="good">
               <WhatsAppIcon size={16} />
             </RealisticIconTile>
-            <span className="text-xs text-fg-secondary">Prefer WhatsApp? Chat with us there</span>
+            <span className="text-xs text-fg-secondary">WhatsApp us</span>
           </a>
         </div>
       )}
@@ -82,57 +83,63 @@ export default function HelpHub() {
 
 function ChatTab() {
   const { pushToast } = useApp()
-  const [dev] = useState(() => developers[Math.floor(Math.random() * developers.length)])
   const [messages, setMessages] = useState([
-    { from: 'dev', text: dev.online ? `Hey, I'm ${dev.name.split(' ')[0]} - what can I help with?` : null },
+    { from: 'ai', text: '🗣 Hi, I’m Aspect™ AI ...ask me about anything?' },
   ])
   const [draft, setDraft] = useState('')
-  const [ticketSent, setTicketSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  function send() {
-    if (!draft.trim()) return
-    if (dev.online) {
-      setMessages((m) => [...m, { from: 'me', text: draft }])
-      setDraft('')
-      setTimeout(() => setMessages((m) => [...m, { from: 'dev', text: 'Got it - looking into that now.' }]), 900)
-    } else {
-      setTicketSent(true)
-      pushToast({ title: 'Message queued', message: `${dev.name} will reply by email when back online.` })
-      setDraft('')
+  async function send() {
+    const message = draft.trim()
+    if (!message || loading) return
+
+    setMessages((m) => [...m, { from: 'me', text: message }])
+    setDraft('')
+    setError('')
+    setLoading(true)
+
+    try {
+      const reply = await generateAspectAIReply(message)
+      setMessages((m) => [...m, { from: 'ai', text: reply }])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Your assistance is starting soon.'
+      setError(errorMessage)
+      setMessages((m) => [...m, { from: 'ai', text: 'Thinking....' }])
+      pushToast({ title: 'Aspect™ AI unavailable', message: errorMessage })
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 mb-2.5">
-        <span className="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[10px] font-mono">{dev.initials}</span>
+        <span className="w-7 h-7 rounded-full bg-signal/10 flex items-center justify-center text-[10px] font-mono font-bold text-signal-bright">AI</span>
         <div>
-          <div className="text-xs text-fg-primary">{dev.name}</div>
-          <StatusDot tone={dev.online ? 'good' : 'neutral'} label={dev.online ? 'Online now' : 'Offline'} />
+          <div className="text-xs text-fg-primary">Aspect™ AI</div>
+          <StatusDot tone="good" label="Online now" />
         </div>
       </div>
       <div className="space-y-1.5 mb-2.5 max-h-40 overflow-y-auto">
-        {!dev.online && !ticketSent && (
-          <div className="text-xs text-fg-muted bg-surface-1 rounded-lg p-2">
-            Offline right now — your message becomes a ticket.
-          </div>
-        )}
-        {ticketSent && <div className="text-xs text-good bg-good/10 rounded-lg p-2">Queued : you'll get an email reply.</div>}
+        {error && <div className="text-xs text-bad bg-bad/10 rounded-lg p-2">{error}</div>}
         {messages.filter((m) => m.text).map((m, i) => (
           <div key={i} className={clsx('max-w-[85%] rounded-xl px-2.5 py-1.5 text-xs', m.from === 'me' ? 'ml-auto bg-signal text-white' : 'bg-surface-1 text-fg-primary')}>
             {m.text}
           </div>
         ))}
+        {loading && <div className="text-xs text-fg-muted bg-surface-1 rounded-lg p-2">Aspect AI is thinking…</div>}
       </div>
       <div className="flex gap-2 mt-auto">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
-          placeholder="Type a message..."
+          placeholder="Talk with Aspect™ AI..."
           className="input-field !py-1.5 text-xs"
+          disabled={loading}
         />
-        <button onClick={send} className="p-2 rounded-lg bg-signal text-white focus-ring shrink-0" aria-label="Send">
+        <button onClick={send} disabled={loading} className="p-2 rounded-lg bg-signal text-white focus-ring shrink-0 disabled:opacity-60" aria-label="Send">
           <Send size={13} />
         </button>
       </div>
@@ -147,11 +154,17 @@ const severities = [
 ]
 
 function FeedbackTab() {
-  const { pushToast } = useApp()
+  const navigate = useNavigate()
+  const { pushToast, role } = useApp()
   const [severity, setSeverity] = useState('functional')
   const [note, setNote] = useState('')
 
   function fileTicket() {
+    if (role === 'visitor') {
+      pushToast({ title: 'Please log in', message: 'Sign in before submitting feedback.' })
+      navigate('/login', { state: { from: '/' } })
+      return
+    }
     if (!note.trim()) return
     pushToast({ title: 'Feedback filed', message: `Severity: ${severity}. Screenshot attached automatically.` })
     setNote('')

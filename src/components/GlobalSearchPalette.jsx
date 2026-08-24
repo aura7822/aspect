@@ -10,7 +10,7 @@ const staticCommands = [
   { label: 'Open Settings', to: '/settings', group: 'Navigate' },
   { label: 'View Pricing', to: '/pricing', group: 'Navigate' },
   { label: 'View Transparency', to: '/transparency', group: 'Navigate' },
-  { label: 'Start a new project', to: '/start-a-project', group: 'Actions' },
+  { label: 'Launch a new project', to: '/start-a-project', group: 'Actions' },
 ]
 
 export default function GlobalSearchPalette({ open, onClose }) {

@@ -15,18 +15,29 @@ const paymentMethods = [
 
 export default function Pricing() {
   const navigate = useNavigate()
-  const { selectedEntity, setSelectedEntity, pushToast } = useApp()
+  const { selectedEntity, setSelectedEntity, pushToast, role } = useApp()
   const [browseServiceId, setBrowseServiceId] = useState(serviceCatalog[0].id)
   const [method, setMethod] = useState(null)
 
   const picked = selectedEntity ? findEntity(selectedEntity.serviceId, selectedEntity.subcategoryId) : null
 
+  function requireLogin() {
+    if (role === 'visitor') {
+      pushToast({ title: 'Please log in', message: 'Create an account to continue with pricing and project requests.' })
+      navigate('/login', { state: { from: '/pricing' } })
+      return true
+    }
+    return false
+  }
+
   function pick(serviceId, subcategoryId) {
+    if (requireLogin()) return
     setSelectedEntity({ serviceId, subcategoryId })
     setMethod(null)
   }
 
   function payDeposit() {
+    if (requireLogin()) return
     if (!method) return
     pushToast({
       title: 'Deposit request created',
@@ -60,7 +71,10 @@ export default function Pricing() {
               <div className="font-mono text-2xl text-signal-bright">{formatKES(picked.sub.priceKES)}</div>
               <div className="text-xs text-fg-muted mt-1">Minimum deposit: {formatKES(minDeposit(picked.sub.priceKES))}</div>
               <button
-                onClick={() => navigate('/start-a-project')}
+                onClick={() => {
+                  if (requireLogin()) return
+                  navigate('/start-a-project')
+                }}
                 className="mt-2 px-5 py-2.5 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright transition-colors focus-ring"
               >
                 Get started
@@ -124,7 +138,10 @@ export default function Pricing() {
               ))}
             </ul>
             <button
-              onClick={() => navigate('/start-a-project')}
+              onClick={() => {
+                if (requireLogin()) return
+                navigate('/start-a-project')
+              }}
               className={clsx(
                 'mt-6 text-center px-4 py-2.5 rounded-lg text-sm font-medium focus-ring transition-colors',
                 p.featured ? 'bg-signal text-white hover:bg-signal-bright' : 'border border-subtle text-fg-secondary hover:border-strong'

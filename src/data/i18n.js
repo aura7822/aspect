@@ -12,7 +12,7 @@ export const translations = {
   en: {
     nav_services: 'Services', nav_pricing: 'Pricing', nav_developers: 'Developers',
     nav_transparency: 'Transparency', nav_bulletins: 'Bulletins', nav_changelog: 'Changelog',
-    nav_dashboard: 'Dashboard', start_project: 'Start a project', get_started: 'Get started',
+    nav_dashboard: 'Dashboard', start_project: 'Launch a project', get_started: 'Get started',
     log_out: 'Log out', account_settings: 'Account settings', accessibility: 'Accessibility',
     read_aloud: 'Read this page aloud', stop_reading: 'Stop reading', dark_mode: 'Dark mode',
     light_mode: 'Light mode', dyslexia_font: 'Dyslexia-friendly font', font_size: 'Text size',

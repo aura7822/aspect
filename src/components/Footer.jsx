@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import { GitBranch, Camera, MessageCircle } from 'lucide-react'
+import { GitBranch, MessageCircleCode, Camera, Send } from 'lucide-react'
 import clsx from 'clsx'
 import Logo from './Logo.jsx'
+//import { Instagram, Dog, Bat } from '@lineiconshq/free-icons'
 
 const columns = [
   {
@@ -9,7 +10,7 @@ const columns = [
     links: [
       { to: '/services', label: '☭ Services' },
       { to: '/pricing', label: ' Pricing Plans' },
-      { to: '/about', label: '🛈 About' },
+      { to: '/about', label: 'Orientation' },
       { to: '/careers', label: ' Careers' },
     ],
   },
@@ -33,9 +34,10 @@ const columns = [
 ]
 
 const socials = [
-  { icon: GitBranch, href: 'https://github.com', label: 'GitHub' },
-  { icon: Camera, href: 'https://instagram.com', label: 'Instagram' },
-  { icon: MessageCircle, href: 'https://wa.me/000000000', label: 'WhatsApp' },
+  { icon: GitBranch, href: 'https://github.com/aura7822', label: 'GitHub' },
+  { icon: Camera, href: 'https://www.instagram.com/_t.y.p.i.c.a.l.l.y_aura_73/#', label: 'Instagram' },
+  { icon: MessageCircleCode, href: 'https://wa.me/+254119750041', label: 'WhatsApp' },
+  { icon: Send, href: 'https://t.me/Aura_73', label: 'Telegram' },
 ]
 
 export default function Footer() {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 // loop=true: types all lines, pauses, deletes, and retypes forever (used for the hero).
 // loop=false: types once and stops with a steady caret (used for the sign-in greeting).
-export default function TypingHeadline({ lines, className, loop = true, fontSize = 40 }) {
+export default function TypingHeadline({ lines, className, loop = true, fontSize = 45 }) {
   const [lineIdx, setLineIdx] = useState(0)
   const [charIdx, setCharIdx] = useState(0)
   const [phase, setPhase] = useState('typing') // typing | pausing | deleting | done

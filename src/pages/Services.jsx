@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import CaseStudyCard from '../components/CaseStudyCard.jsx'
 import GlassCard from '../components/GlassCard.jsx'
 import { serviceCatalog as services } from '../data/serviceCatalog.js'
 import { caseStudies } from '../data/caseStudies.js'
-
+import { useApp } from '../context/AppContext.jsx'
 const testimonials = [
   { quote: 'Aspect shipped in six weeks what our last vendor quoted six months for.', name: 'Rhea Patel', role: 'CTO, Ledgerly' },
   { quote: 'The client dashboard made it feel like we had an internal team, not a contractor.', name: 'Jon Ferreira', role: 'Founder, VitalPath' },
@@ -12,8 +12,19 @@ const testimonials = [
 ]
 
 export default function Services() {
+  const navigate = useNavigate()
+  const { role, pushToast } = useApp()
   const [filter, setFilter] = useState('all')
   const shown = filter === 'all' ? caseStudies : caseStudies.filter((c) => c.service === filter)
+
+  function handleLaunchClick() {
+    if (role === 'visitor') {
+      pushToast({ title: 'Please log in', message: 'Sign in to launch a project.' })
+      navigate('/login', { state: { from: '/services' } })
+      return
+    }
+    navigate('/start-a-project')
+  }
 
   return (
     <div className="container-page py-16">
@@ -66,9 +77,9 @@ export default function Services() {
       <GlassCard className="p-8 text-center">
         <h3 className="font-display text-xl mb-2">Not sure which service fits?</h3>
         <p className="text-fg-muted mb-5">Send us a POC request , we'll route it to the right team.</p>
-        <Link to="/start-a-project" className="inline-flex px-5 py-2.5 rounded-lg bg-signal text-white text-sm font-medium focus-ring">
-          Start a project
-        </Link>
+        <button onClick={handleLaunchClick} className="inline-flex px-5 py-2.5 rounded-lg bg-signal text-white text-sm font-medium focus-ring">
+          Launch a project
+        </button>
       </GlassCard>
     </div>
   )
