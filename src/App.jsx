@@ -4,6 +4,7 @@ import Navbar from './components/Navbar.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Footer from './components/Footer.jsx'
 import Toasts from './components/Toasts.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Breadcrumb from './components/Breadcrumb.jsx'
 import HelpHub from './components/HelpHub.jsx'
 import Home from './pages/Home.jsx'
@@ -30,7 +31,9 @@ const AUTH_PAGES = ['/login', '/forgot-password', '/reset-password', '/verify-em
 
 function ScrollToTop() {
   const { pathname } = useLocation()
-  useEffect(() => window.scrollTo(0, 0), [pathname])
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
   return null
 }
 
@@ -84,6 +87,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex">
       <ScrollToTop />
+      <ErrorBoundary>
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Navbar />
@@ -112,6 +116,7 @@ export default function App() {
         </main>
         <Footer />
       </div>
+      </ErrorBoundary>
       <HelpHub />
       <Toasts />
     </div>
