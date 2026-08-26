@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { motion } from 'framer-motion'
 
 const facets = [
   { label: 'Design', code: 'aspect.design', rot: -6, x: -30, y: -10, size: 180 },
@@ -29,25 +28,20 @@ export default function FacetedHero() {
       style={{ perspective: '1200px' }}
     >
       {facets.map((f, i) => (
-        <motion.div
+        <div
           key={f.label}
-          className="absolute glass rounded-2xl flex flex-col justify-between p-4"
+          className="absolute glass rounded-2xl flex flex-col justify-between p-4 transition-transform duration-300 ease-out"
           style={{
             width: f.size,
             height: f.size * 0.72,
             left: `calc(50% + ${f.x}px)`,
             top: `calc(50% + ${f.y}px)`,
-            transform: `translate(-50%, -50%) rotate(${f.rot}deg)`,
+            transform: `translate(-50%, -50%) rotate(${f.rot}deg) rotateX(${tilt.y * (0.4 + i * 0.15)}deg) rotateY(${tilt.x * (0.4 + i * 0.15)}deg)`,
           }}
-          animate={{
-            rotateX: tilt.y * (0.4 + i * 0.15),
-            rotateY: tilt.x * (0.4 + i * 0.15),
-          }}
-          transition={{ type: 'spring', stiffness: 80, damping: 14 }}
         >
           <span className="font-mono text-[10px] text-signal-bright tracking-wide">{f.code}</span>
           <span className="font-display text-lg text-fg-primary">{f.label}</span>
-        </motion.div>
+        </div>
       ))}
     </div>
   )

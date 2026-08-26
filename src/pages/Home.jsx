@@ -29,7 +29,6 @@ export default function Home() {
       <section className="relative container-page pt-16 pb-8 overflow-hidden">
         <HeroVideoBackground />
         <div className="max-w-2xl">
-          
           <TypingHeadline lines={[t('hero_line1'), t('hero_line2')]} loop className="mt-5" />
           <p className="text-fg-muted mt-5 text-base md:text-lg max-w-md leading-relaxed">
             Aspect designs, builds, and ships full-stack products, then keeps the engineering visible
@@ -55,7 +54,7 @@ export default function Home() {
       {/* Why work with us — quote, no card background */}
       <section className="container-page py-10">
         <QuoteBlock>
-         We're an enterprise studio that would rather ship working software than perform busywork. Every
+          We're an enterprise studio that would rather ship working software than perform busywork. Every
           engagement comes with a live client dashboard, transparent pricing, and a team that answers its own
           Office Hours - no account managers standing between you and the people writing your code...
         </QuoteBlock>

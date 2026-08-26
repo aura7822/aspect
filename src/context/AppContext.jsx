@@ -76,15 +76,20 @@ export function AppProvider({ children }) {
   // silently log the person out. A 401 here just means "visitor", not an error.
   useEffect(() => {
     let cancelled = false
-    api
-      .get('/api/auth/me')
-      .then(({ user }) => {
+
+    async function hydrateSession() {
+      try {
+        const { user } = await api.get('/api/auth/me')
         if (!cancelled) setCurrentUser(user)
-      })
-      .catch(() => {})
-      .finally(() => {
+      } catch {
+        // Visitor or no valid session — leave currentUser as null.
+      } finally {
         if (!cancelled) setAuthChecked(true)
-      })
+      }
+    }
+
+    hydrateSession()
+
     return () => {
       cancelled = true
     }

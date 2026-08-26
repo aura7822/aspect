@@ -35,14 +35,14 @@ function Careers() {
   const [cvName, setCvName] = useState(null)
   const [submittedFor, setSubmittedFor] = useState(null)
 
-  // Vacancy listings are only for clients, end-users, and visitors — not staff.
-  if (role === 'developer' || role === 'admin') return <Navigate to="/dashboard" replace />
-
   useEffect(() => {
     if (role === 'visitor') {
       pushToast({ title: 'Please log in', message: 'Sign in to apply for a role.' })
     }
   }, [pushToast, role])
+
+  // Vacancy listings are only for clients, end-users, and visitors — not staff.
+  if (role === 'developer' || role === 'admin') return <Navigate to="/dashboard" replace />
 
   if (role === 'visitor') return <Navigate to="/login" replace state={{ from: '/careers' }} />
 

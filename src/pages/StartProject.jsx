@@ -49,10 +49,6 @@ export default function StartProject() {
   const [agreed, setAgreed] = useState(false)
   const [touched, setTouched] = useState(false)
 
-  if (role === 'visitor') {
-    return <Navigate to="/login" replace state={{ from: '/start-a-project' }} />
-  }
-
   const typeMultiplier = { 'new-feature': 0.6, 'bug-fix': 0.35, 'new-project': 1 }[projectType] ?? 0.6
 
   const estimate = useMemo(() => {
@@ -84,6 +80,10 @@ export default function StartProject() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEntity])
+
+  if (role === 'visitor') {
+    return <Navigate to="/login" replace state={{ from: '/start-a-project' }} />
+  }
 
   const request = projectRequests.find((r) => r.id === requestId)
 

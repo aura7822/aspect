@@ -102,6 +102,10 @@ html.dark .glass {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
+@keyframes confetti {
+  0% { transform: translateY(-8px) scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(90px) scale(0.7) rotate(180deg); opacity: 0; }
+}
 .typing-caret {
   animation: typing-caret 0.9s step-start infinite;
 }

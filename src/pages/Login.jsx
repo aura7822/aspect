@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom'
-import { LogIn, UserPlus, Briefcase, User, Code2, ShieldCheck, Eye, EyeOff, ShieldQuestion, Mail, Armchair, Cookie } from 'lucide-react'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
+import { LogIn, UserPlus, Briefcase, User, Code2, ShieldCheck, Eye, EyeOff, ShieldQuestion, Mail, Clock, Compass } from 'lucide-react'
 import clsx from 'clsx'
 import GlassCard from '../components/GlassCard.jsx'
 import Logo from '../components/Logo.jsx'
@@ -12,14 +12,13 @@ const roleOptions = [
   { id: 'enduser', label: 'End-User', icon: User, blurb: "I use a product Aspect's already shipped" },
   { id: 'developer', label: 'Developer', icon: Code2, blurb: "I'm part of the Aspect team" },
   { id: 'admin', label: 'Sudo', icon: ShieldCheck, blurb: 'I manage the Project' },
-  { id: 'visitor', label: 'Guest', icon: Armchair, blurb: 'I want basic startup  naviation' },
 ]
-export default function Login() {
-  const { role, isAuthed, completeAuth, pushToast } = useApp()
-  const navigate = useNavigate()
-  const location = useLocation()
 
-  // 'login' | 'signup' | 'awaiting-verification' | 'mfa'
+export default function Login() {
+  const { role, completeAuth, pushToast } = useApp()
+  const navigate = useNavigate()
+
+  // 'login' | 'signup' | 'awaiting-verification' | 'mfa' | 'pending-approval'
   const [stage, setStage] = useState('login')
   const [selectedRole, setSelectedRole] = useState('client')
   const [name, setName] = useState('')
@@ -28,23 +27,12 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [cookieConsent, setCookieConsent] = useState(() => {
-    if (typeof window === 'undefined') return 'pending'
-    return localStorage.getItem('aspect-cookie-consent') ?? 'pending'
-  })
-
-  function saveCookieChoice(choice) {
-    if (typeof window !== 'undefined') localStorage.setItem('aspect-cookie-consent', choice)
-    setCookieConsent(choice)
-  }
 
   // MFA step state
   const [challengeId, setChallengeId] = useState(null)
   const [mfaCode, setMfaCode] = useState('')
 
-  if (isAuthed && role !== 'visitor') return <Navigate to="/dashboard" replace />
-
-  const from = location.state?.from || '/dashboard'
+  if (role !== 'visitor') return <Navigate to="/dashboard" replace />
 
   const isSignup = stage === 'signup'
   const valid = isSignup ? name.trim() && email.trim() && password.trim() : email.trim() && password.trim()
@@ -52,7 +40,7 @@ export default function Login() {
   async function completeLogin(user) {
     completeAuth(user)
     pushToast({ title: 'Signed in', message: `You're in as ${user.name}.` })
-    navigate(from, { replace: true })
+    navigate('/dashboard')
   }
 
   async function submit() {
@@ -84,12 +72,21 @@ export default function Login() {
       if (err instanceof ApiError && err.body?.error === 'EMAIL_NOT_VERIFIED') {
         setStage('awaiting-verification')
         setError(null)
+      } else if (err instanceof ApiError && err.body?.error === 'ACCOUNT_PENDING_APPROVAL') {
+        setStage('pending-approval')
+        setError(null)
       } else {
         setError(err instanceof ApiError ? err.message : 'Could not reach the server. Is the backend running?')
       }
     } finally {
       setLoading(false)
     }
+  }
+
+  // Visiting without an account at all — currentUser stays null, which the
+  // rest of the app already treats as role: 'visitor'. No API call needed.
+  function continueAsGuest() {
+    navigate('/')
   }
 
   async function submitMfa() {
@@ -119,38 +116,6 @@ export default function Login() {
   return (
     <div className="container-page py-16 flex justify-center">
       <div className="w-full max-w-md">
-        {cookieConsent === 'pending' && (
-          <div className="fixed inset-x-0 bottom-0 z-50 bg-ink-900/95 border-t border-subtle px-4 py-4 shadow-[0_-12px_30px_rgba(0,0,0,0.35)]">
-            <div className="mx-auto max-w-5xl flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="max-w-2xl flex items-start gap-3">
-                <div className="mt-0.5 rounded-full bg-signal/10 p-2 text-signal-bright">
-                  <Cookie size={16} />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-white">Cookies &amp; session preferences</div>
-                  <p className="text-xs text-fg-muted mt-1 leading-relaxed">
-                    We use cookies to keep your session secure, remember your preferences, and improve the experience. You can accept all or keep it to essential cookies only.
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => saveCookieChoice('essential')}
-                  className="px-3.5 py-2 rounded-lg border border-subtle text-sm text-fg-secondary hover:border-strong focus-ring"
-                >
-                  Essential only
-                </button>
-                <button
-                  onClick={() => saveCookieChoice('accepted')}
-                  className="px-3.5 py-2 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright focus-ring"
-                >
-                  Accept all
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="flex flex-col items-center mb-8">
           <Logo size={36} />
           <h1 className="font-display text-2xl mt-3">Welcome to Aspect™</h1>
@@ -181,6 +146,20 @@ export default function Login() {
                   ← Back to log in
                 </button>
               </div>
+            </div>
+          )}
+
+          {stage === 'pending-approval' && (
+            <div className="text-center py-4">
+              <Clock size={28} className="text-signal-bright mx-auto mb-4" />
+              <h3 className="font-display text-lg mb-2">Awaiting admin approval</h3>
+              <p className="text-sm text-fg-muted mb-6">
+                Developer and admin accounts need to be approved by an existing admin before you can log in. You'll be
+                notified by email once that happens.
+              </p>
+              <button onClick={() => setStage('login')} className="text-sm text-fg-secondary hover:text-fg-primary focus-ring">
+                ← Back to log in
+              </button>
             </div>
           )}
 
@@ -238,7 +217,7 @@ export default function Login() {
                   onClick={() => setStage('signup')}
                   className={clsx('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-colors focus-ring', stage === 'signup' ? 'bg-signal text-white' : 'text-fg-muted')}
                 >
-                  <UserPlus size={14} /> Sign up
+                  <UserPlus size={14} /> Get Started
                 </button>
               </div>
 
@@ -313,7 +292,21 @@ export default function Login() {
               </button>
               <p className="text-[11px] text-fg-muted mt-3 text-center">
                 NOTICE: By proceeding you agree to our terms of service
+                
               </p>
+
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-subtle" />
+                <span className="text-xs text-fg-muted">or</span>
+                <div className="flex-1 h-px bg-subtle" />
+              </div>
+
+              <button
+                onClick={continueAsGuest}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-subtle text-sm font-medium text-fg-secondary hover:border-strong hover:text-fg-primary transition-colors focus-ring"
+              >
+                <Compass size={15} /> Continue as guest
+              </button>
             </>
           )}
         </GlassCard>
