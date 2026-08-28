@@ -1,37 +1,48 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { CheckCircle2, Loader2 } from 'lucide-react'
 import GlassCard from '../components/GlassCard.jsx'
 import Logo from '../components/Logo.jsx'
 import { api, ApiError } from '../lib/apiClient.js'
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams()
-  const token = searchParams.get('token') ?? ''
-  const [status, setStatus] = useState('verifying') // verifying | success | error
+  const legacyToken = searchParams.get('token') ?? ''
+  const [code, setCode] = useState('')
+  const [status, setStatus] = useState(legacyToken ? 'verifying' : 'idle')
   const [message, setMessage] = useState('')
-  // Verification tokens are single-use, so React StrictMode's dev-mode
-  // double-invocation of effects would otherwise fire the request twice —
-  // the second call correctly fails (token already consumed) and would
-  // clobber the first call's success. This ref makes the request fire once.
-  const requested = useRef(false)
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (!token) {
+  async function submitVerification(nextCode) {
+    const normalized = String(nextCode ?? code).replace(/\D/g, '').slice(0, 6)
+    if (!normalized) {
       setStatus('error')
-      setMessage('This link is missing its token.')
+      setMessage('Enter the 6-digit verification code.')
       return
     }
-    if (requested.current) return
-    requested.current = true
-    api
-      .post('/api/auth/verify-email', { token })
-      .then(() => setStatus('success'))
-      .catch((err) => {
-        setStatus('error')
-        setMessage(err instanceof ApiError ? err.message : 'Could not reach the server.')
-      })
-  }, [token])
+
+    setLoading(true)
+    setStatus('verifying')
+    setMessage('')
+
+    try {
+      const payload = legacyToken ? { token: legacyToken } : { code: normalized }
+      if (!legacyToken) payload.code = normalized
+      await api.post('/api/auth/verify-email', payload)
+      setStatus('success')
+      setMessage('')
+    } catch (err) {
+      setStatus('error')
+      setMessage(err instanceof ApiError ? err.message : 'Could not reach the server.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!legacyToken || status !== 'verifying' || loading) return
+    submitVerification(legacyToken)
+  }, [legacyToken, status, loading])
 
   return (
     <div className="container-page py-16 flex justify-center">
@@ -41,29 +52,52 @@ export default function VerifyEmail() {
           <h1 className="font-display text-2xl mt-3">Email verification</h1>
         </div>
 
-        <GlassCard className="p-6 md:p-8 text-center py-10">
+        <GlassCard className="p-6 md:p-8">
           {status === 'verifying' && (
-            <>
+            <div className="text-center py-4">
               <Loader2 size={28} className="text-signal-bright mx-auto mb-4 animate-spin" />
               <p className="text-sm text-fg-muted">Verifying your email…</p>
-            </>
+            </div>
           )}
+
+          {(status === 'idle' || status === 'error') && (
+            <div>
+              <p className="text-sm text-fg-muted mb-5 text-center">
+                Enter the 6-digit code we sent to your email to verify your account.
+              </p>
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyDown={(e) => e.key === 'Enter' && submitVerification()}
+                placeholder="000000"
+                inputMode="numeric"
+                autoFocus
+                className="input-field text-center text-2xl tracking-[0.5em] font-mono"
+              />
+              {status === 'error' && (
+                <p className="text-sm text-bad mt-3 text-center" role="alert">
+                  {message}
+                </p>
+              )}
+              <button
+                onClick={() => submitVerification()}
+                disabled={code.length !== 6 || loading}
+                className="w-full mt-4 py-2.5 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright transition-colors focus-ring disabled:opacity-40"
+              >
+                {loading ? 'Verifying…' : 'Verify email'}
+              </button>
+            </div>
+          )}
+
           {status === 'success' && (
-            <>
+            <div className="text-center py-4">
               <CheckCircle2 size={28} className="text-good mx-auto mb-4" />
               <h3 className="font-display text-lg mb-2">Email verified</h3>
               <p className="text-sm text-fg-muted mb-6">You can log in now.</p>
               <Link to="/login" className="inline-flex px-5 py-2.5 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright transition-colors focus-ring">
                 Go to log in
               </Link>
-            </>
-          )}
-          {status === 'error' && (
-            <>
-              <XCircle size={28} className="text-bad mx-auto mb-4" />
-              <h3 className="font-display text-lg mb-2">Verification failed</h3>
-              <p className="text-sm text-fg-muted">{message}</p>
-            </>
+            </div>
           )}
         </GlassCard>
       </div>

@@ -25,8 +25,13 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  // Developer signup fields
+  const [github, setGithub] = useState('')
+  const [openSource, setOpenSource] = useState('')
 
   // MFA step state
   const [challengeId, setChallengeId] = useState(null)
@@ -35,7 +40,13 @@ export default function Login() {
   if (role !== 'visitor') return <Navigate to="/dashboard" replace />
 
   const isSignup = stage === 'signup'
-  const valid = isSignup ? name.trim() && email.trim() && password.trim() : email.trim() && password.trim()
+  const isDeveloperSignup = isSignup && selectedRole === 'developer'
+  const valid = isSignup
+    ? name.trim() &&
+      email.trim() &&
+      password.trim() &&
+      (!isDeveloperSignup || (github.trim() && openSource.trim()))
+    : email.trim() && password.trim()
 
   async function completeLogin(user) {
     completeAuth(user)
@@ -54,11 +65,12 @@ export default function Login() {
           password,
           name: name.trim(),
           role: selectedRole,
+          github: isDeveloperSignup ? github.trim() : undefined,
+          openSource: isDeveloperSignup ? openSource.trim() : undefined,
           formRenderedAt: Date.now() - 5000,
         })
-        // No session yet — the account can't log in until the email link is
-        // clicked. Real signup flows don't skip this step.
-        setStage('awaiting-verification')
+        // Developers require admin verification; others just need email verification
+        setStage(isDeveloperSignup ? 'pending-approval' : 'awaiting-verification')
       } else {
         const result = await api.post('/api/auth/login', { email: email.trim(), password })
         if (result.mfaRequired) {
@@ -103,11 +115,29 @@ export default function Login() {
     }
   }
 
+  async function verifyEmailCode() {
+    const normalized = verificationCode.replace(/\D/g, '').slice(0, 6)
+    if (!normalized || loading) return
+
+    setError(null)
+    setLoading(true)
+    try {
+      await api.post('/api/auth/verify-email', { code: normalized })
+      setStage('login')
+      setVerificationCode('')
+      pushToast({ title: 'Email verified', message: 'Your account is verified. You can log in now.' })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not reach the server.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function resendVerification() {
     setLoading(true)
     try {
       await api.post('/api/auth/resend-verification', { email: email.trim() })
-      pushToast({ title: 'Email sent', message: 'Check your inbox for a new verification link.' })
+      pushToast({ title: 'Email sent', message: 'Check your inbox for a new verification code.' })
     } finally {
       setLoading(false)
     }
@@ -127,20 +157,48 @@ export default function Login() {
             <div className="text-center py-4">
               <Mail size={28} className="text-signal-bright mx-auto mb-4" />
               <h3 className="font-display text-lg mb-2">Check your email</h3>
-              <p className="text-sm text-fg-muted mb-6">
-                We sent a verification link to <span className="text-fg-secondary">{email}</span>. Click it, then come
-                back and log in.
+              <p className="text-sm text-fg-muted mb-5">
+                We sent a 6-digit verification code to <span className="text-fg-secondary">{email}</span>.
               </p>
+
+              <input
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyDown={(e) => e.key === 'Enter' && verifyEmailCode()}
+                placeholder="000000"
+                inputMode="numeric"
+                autoFocus
+                className="input-field text-center text-2xl tracking-[0.5em] font-mono"
+              />
+
+              {error && (
+                <p className="text-sm text-bad mt-3 text-center" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <button
+                onClick={verifyEmailCode}
+                disabled={verificationCode.length !== 6 || loading}
+                className="w-full mt-4 py-2.5 rounded-lg bg-signal text-white text-sm font-medium hover:bg-signal-bright transition-colors focus-ring disabled:opacity-40"
+              >
+                {loading ? 'Verifying…' : 'Verify email'}
+              </button>
+
               <button
                 onClick={resendVerification}
                 disabled={loading}
-                className="text-sm text-signal-bright hover:underline focus-ring disabled:opacity-40"
+                className="mt-4 text-sm text-signal-bright hover:underline focus-ring disabled:opacity-40"
               >
-                Resend verification email
+                Resend verification code
               </button>
               <div className="mt-6 pt-6 border-t border-subtle">
                 <button
-                  onClick={() => setStage('login')}
+                  onClick={() => {
+                    setStage('login')
+                    setVerificationCode('')
+                    setError(null)
+                  }}
                   className="text-sm text-fg-secondary hover:text-fg-primary focus-ring"
                 >
                   ← Back to log in
@@ -153,10 +211,20 @@ export default function Login() {
             <div className="text-center py-4">
               <Clock size={28} className="text-signal-bright mx-auto mb-4" />
               <h3 className="font-display text-lg mb-2">Awaiting admin approval</h3>
-              <p className="text-sm text-fg-muted mb-6">
-                Developer and admin accounts need to be approved by an existing admin before you can log in. You'll be
-                notified by email once that happens.
+              <p className="text-sm text-fg-muted mb-2">
+                Your developer account has been created successfully!
               </p>
+              <p className="text-sm text-fg-muted mb-6">
+                Our admin team at <span className="text-signal-bright font-medium">joshuaura7822@gmail.com</span> will verify your GitHub and open source URLs. You'll be notified by email once approval is complete.
+              </p>
+              <div className="bg-surface-1 rounded-lg p-4 mb-6 text-left text-xs text-fg-secondary">
+                <p className="font-medium text-fg-primary mb-2">What happens next:</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Admin reviews your profiles</li>
+                  <li>Email verification link is sent</li>
+                  <li>You can log in after verification</li>
+                </ul>
+              </div>
               <button onClick={() => setStage('login')} className="text-sm text-fg-secondary hover:text-fg-primary focus-ring">
                 ← Back to log in
               </button>
@@ -228,7 +296,14 @@ export default function Login() {
                     {roleOptions.map((r) => (
                       <button
                         key={r.id}
-                        onClick={() => setSelectedRole(r.id)}
+                        onClick={() => {
+                          setSelectedRole(r.id)
+                          // Reset developer fields if role changes away from developer
+                          if (r.id !== 'developer') {
+                            setGithub('')
+                            setOpenSource('')
+                          }
+                        }}
                         className={clsx(
                           'flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-colors focus-ring',
                           selectedRole === r.id ? 'border-signal bg-signal/10' : 'border-subtle hover:border-strong'
@@ -267,6 +342,27 @@ export default function Login() {
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
+                {isDeveloperSignup && (
+                  <>
+                    <input
+                      value={github}
+                      onChange={(e) => setGithub(e.target.value)}
+                      type="url"
+                      placeholder="GitHub profile URL (required)"
+                      className="input-field"
+                    />
+                    <input
+                      value={openSource}
+                      onChange={(e) => setOpenSource(e.target.value)}
+                      type="url"
+                      placeholder="Open source contributions URL (required)"
+                      className="input-field"
+                    />
+                    <div className="p-3 rounded-lg bg-signal/5 border border-signal/20">
+                      <p className="text-xs text-fg-secondary">IMPORTANT: Your profile will be verified by our admin team soon</p>
+                    </div>
+                  </>
+                )}
               </div>
 
               {!isSignup && (

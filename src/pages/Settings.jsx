@@ -57,6 +57,8 @@ function AccountTab() {
   const [password, setPassword] = useState('')
   const [avatar, setAvatar] = useState(currentUser?.avatar ?? null)
   const [avatarPreset, setAvatarPreset] = useState(currentUser?.avatarPreset ?? 'default')
+  const [github, setGithub] = useState(currentUser?.github ?? '')
+  const [openSource, setOpenSource] = useState(currentUser?.openSource ?? '')
   const [notifyProduct, setNotifyProduct] = useState(currentUser?.notifyPrefs?.product ?? true)
   const [notifyProject, setNotifyProject] = useState(currentUser?.notifyPrefs?.project ?? true)
   const [confirmDeactivate, setConfirmDeactivate] = useState(false)
@@ -79,7 +81,7 @@ function AccountTab() {
   }
 
   function save() {
-    updateProfile({ name, email, avatar, avatarPreset, notifyPrefs: { product: notifyProduct, project: notifyProject } })
+    updateProfile({ name, email, avatar, avatarPreset, github, openSource, notifyPrefs: { product: notifyProduct, project: notifyProject } })
     setPassword('')
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
@@ -131,6 +133,31 @@ function AccountTab() {
           <Field label="Reset password">
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password" className="input-field" />
           </Field>
+          {currentUser?.role === 'developer' && (
+            <>
+              <Field label="GitHub Profile URL">
+                <input
+                  type="url"
+                  value={github}
+                  onChange={(e) => setGithub(e.target.value)}
+                  placeholder="https://github.com/username"
+                  className="input-field"
+                />
+              </Field>
+              <Field label="Open Source Contributions URL">
+                <input
+                  type="url"
+                  value={openSource}
+                  onChange={(e) => setOpenSource(e.target.value)}
+                  placeholder="https://github.com/username?tab=repositories"
+                  className="input-field"
+                />
+              </Field>
+              <div className="p-3 rounded-lg bg-signal/5 border border-signal/20">
+                <p className="text-xs text-fg-secondary">These URLs are displayed on the <a href="/developers" className="text-signal-bright hover:underline">Developers page</a> and verified by admin</p>
+              </div>
+            </>
+          )}
           <Field label="Language">
             <select value={language} onChange={(e) => setLanguage(e.target.value)} className="input-field">
               {languages.map((l) => (
